@@ -22,6 +22,8 @@ async execute (request: Request, response: Response){
         email,
     })
 
+    console.log("survey id",survey_id)
+
     const surveyExisted = await surveyRepository.findOne({
         id: survey_id
     });
@@ -40,22 +42,23 @@ async execute (request: Request, response: Response){
    
     const npsPath = resolve(__dirname, "..", "views", "emails", "npsMail.hbs");
 
+ 
+    const surveyUserExits = await surveyUserRepository.findOne({
+        where: {user_id : userExisted.id, value: null},
+        relations: ["user", "survey" ]
+    })
+
     const variables ={
         name: userExisted.name,
         title: surveyExisted.title,
         description: surveyExisted.description,
-        user_id: userExisted.id,
+        id: "",
         link: process.env.URL_MAIL
     }
 
-    const surveyUserExits = await surveyUserRepository.findOne({
-        where:[{user_id : userExisted.id}, {value: null}],
-        relations: ["user", "survey" ]
-    })
-
-    console.log(surveyExisted);
 
     if(surveyUserExits){
+       variables.id = surveyUserExits.id,
        await SendMailService.execute(email, surveyExisted.title, variables, npsPath);
        return response.json(surveyUserExits);
     }
@@ -69,9 +72,10 @@ async execute (request: Request, response: Response){
 
     await  surveyUserRepository.save(surveyUser);
 
+
     // Enviar e-mail para o usuário.
 
-
+    variables.id = surveyUser.id,
     await SendMailService.execute(email, surveyExisted.title, variables, npsPath);
     return response.json(surveyUser);
 }
